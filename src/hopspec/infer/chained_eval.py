@@ -638,6 +638,10 @@ def replay_record(
                     "source": getattr(draft, "last_source", "neural"),
                     "token_sources": token_sources,
                     "replay_mode": speculator.replay_mode,
+                    # Routers that gate on a signal record it, so whether the
+                    # gate discriminated is a measurement rather than an
+                    # inference from a flat tuning table. None for the rest.
+                    "gate_signal": getattr(draft, "last_entropy", None),
                 })
                 produced += emitted
                 round_count += 1

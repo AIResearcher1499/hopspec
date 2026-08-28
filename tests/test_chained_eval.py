@@ -589,3 +589,21 @@ def test_chat_replay_does_not_speculate_the_prompt_newline(
     first_region = [r for r in raw_rounds if r["hop_index"] == -1][0]["region_tokens"]
     chat_first = [r for r in chat_rounds if r["hop_index"] == -1][0]["region_tokens"]
     assert chat_first == first_region - 1
+
+
+def test_rounds_log_the_gate_signal_when_the_proposer_has_one(records):
+    """Whether an entropy gate actually discriminated must be measurable, not
+    inferred from a flat tuning table."""
+    from hopspec.infer.routed_draft import EntropyRoutedProposer, ScopedLookup
+
+    speculator = make_speculator()
+    proposer = EntropyRoutedProposer(speculator, lookup=ScopedLookup(),
+                                     neural=speculator, threshold=1.0)
+    rounds = replay_record(records[0], speculator, gamma=GAMMA, proposer=proposer)
+    signals = [row["gate_signal"] for row in rounds]
+    assert all(s is not None and s >= 0.0 for s in signals)
+
+
+def test_rounds_log_no_gate_signal_for_an_ungated_proposer(records):
+    rounds = replay_record(records[0], make_speculator(), gamma=GAMMA)
+    assert all(row["gate_signal"] is None for row in rounds)
