@@ -1,0 +1,54 @@
+{
+  "workload": "function_call",
+  "mode": "self",
+  "model": "Qwen/Qwen3-1.7B",
+  "examples_attempted": 150,
+  "examples_parsed": 115,
+  "parse_rate": 0.7666666666666667,
+  "boundary": {
+    "n": 1090,
+    "median": 3.51769429585147e-07,
+    "p75": 1.25305023175315e-05,
+    "p95": 0.007652785978280008,
+    "max": 0.25576019287109375,
+    "frac_le_0.25": 0.9990825688073395
+  },
+  "content": {
+    "n": 2496,
+    "median": 2.3312610730741312e-09,
+    "p75": 7.917619093689154e-08,
+    "p95": 3.5986921830044594e-05,
+    "max": 1.5729702711105347,
+    "frac_le_0.25": 0.9927884615384616
+  },
+  "boundary_distinct_tokens": 12,
+  "boundary_majority_rate": 0.21192660550458717,
+  "boundary_constant_predictor_score": 0.21192660550458717,
+  "boundary_top_tokens": [
+    [
+      "\":",
+      231
+    ],
+    [
+      "name",
+      116
+    ],
+    [
+      " \"",
+      116
+    ],
+    [
+      "<tool_call>",
+      115
+    ],
+    [
+      "{\"",
+      115
+    ],
+    [
+      "arguments",
+      115
+    ]
+  ],
+  "median_ratio": 150.89233619007936
+}

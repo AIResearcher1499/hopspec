@@ -1,0 +1,54 @@
+{
+  "workload": "code_agent",
+  "mode": "forced",
+  "model": "Qwen/Qwen3-1.7B",
+  "examples_attempted": 150,
+  "examples_parsed": 150,
+  "parse_rate": 1.0,
+  "boundary": {
+    "n": 722,
+    "median": 0.04017960652709007,
+    "p75": 0.2789635434746742,
+    "p95": 0.6853966683149337,
+    "max": 1.1032752990722656,
+    "frac_le_0.25": 0.7313019390581718
+  },
+  "content": {
+    "n": 11486,
+    "median": 0.053203415125608444,
+    "p75": 0.531111866235733,
+    "p95": 1.1572008430957794,
+    "max": 2.2997195720672607,
+    "frac_le_0.25": 0.6336409542051192
+  },
+  "boundary_distinct_tokens": 26,
+  "boundary_majority_rate": 0.23684210526315788,
+  "boundary_constant_predictor_score": 0.23684210526315788,
+  "boundary_top_tokens": [
+    [
+      "``",
+      171
+    ],
+    [
+      "`\n",
+      170
+    ],
+    [
+      "```",
+      135
+    ],
+    [
+      "create",
+      60
+    ],
+    [
+      "search",
+      51
+    ],
+    [
+      "_dir",
+      51
+    ]
+  ],
+  "median_ratio": 0.7552072819428914
+}
