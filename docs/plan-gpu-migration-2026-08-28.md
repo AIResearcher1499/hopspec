@@ -132,3 +132,72 @@ way: no analysis-only step should require the box.
 Note on ordering: §2 uses the existing sequential path, so it does not
 depend on §3. Do it first — it is the measurement that tells you what the
 whole MPS history is worth.
+
+---
+
+## Amendment 2026-08-29 — §2 revised: the weights cannot be copied
+
+§2 as written requires copying `data/ckpt_*_1p7b.pt` (1.2 GB each) to the box.
+That transfer is not available. §2 is therefore **impossible as specified**:
+a bridge must compare the SAME checkpoint on both devices, and retraining on
+the box produces a different one, which mixes the device effect with a
+checkpoint effect and measures neither.
+
+Nothing above is edited. What follows replaces §2 only.
+
+### §2' Bridge on the model-free arms (no weight transfer)
+
+Two arms run with `draft_model=None` and need no checkpoint at all — the run
+log shows `neural` and `routed` printing `checkpoint feature_mode=...` while
+`lookup` and `scaffold` print nothing:
+
+    --draft-source lookup
+    --draft-source scaffold --scaffold-verb fit
+
+Their MPS baselines are already in this repository:
+`data/rounds_ct_lookup_1p7b.jsonl`, `data/rounds_ct_scaffold_1p7b.jsonl`.
+So the box needs only `git clone` plus the target model from the Hub.
+
+**This test is sharper than the one it replaces.** Both proposers are
+deterministic functions of the committed token ids — no draft network, no
+sampling — so the only thing that can differ between CUDA and MPS is the
+target's greedy argmax, which is precisely the risk §2 named. The outcome is
+therefore not "small delta or large delta" but exact: either the round files
+match, or a countable number of rounds diverged. `09_device_bridge_compare.py`
+reports which, and falls back to the per-record paired statistics only if
+there is anything to be statistical about.
+
+Run on the box (after §1):
+
+    bash scripts/08_device_bridge.sh cuda
+
+then bring `data/rounds_cuda_{lookup,scaffold}_1p7b.jsonl` back (≈140 KB each)
+and run the comparison on the laptop, per §5:
+
+    .venv/bin/python scripts/09_device_bridge_compare.py
+
+### What §2' does and does not cover
+
+Covered — the whole shared path: target model load and dtype, the chat
+wrapper, the KV cache and its rollbacks, greedy verification, the
+rails-restoring replay, the scaffold FSM fit on the train split, the scoped
+lookup.
+
+Not covered — the draft network's own forward. That is acceptable here only
+because the draft is retrained on CUDA anyway (§6 step 5), after which no
+number depends on an MPS-trained draft. Until then the neural-arm results in
+`docs/chat-trained-draft-result-2026-08-29.md` are **pilot-only**, which is
+the fallback §2 already pre-registered for a large delta. State it that way in
+the paper; do not quote an MPS neural number as a CUDA one.
+
+### Interpretation, fixed in advance (unchanged in spirit from §2)
+
+- Round files identical → the verification path is device-stable on this
+  workload. Report it as a result, not as an assumption, and the MPS pilot is
+  directionally comparable for everything that does not involve the draft net.
+- A countable number of diverging rounds → report the count and the pooled
+  effect. Divergence is expected to be rare and tie-driven; if it is not rare,
+  every table must be regenerated on CUDA.
+
+Either outcome is fine. Assuming the delta is small without measuring it is
+the one option that is not.
