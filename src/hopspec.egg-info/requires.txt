@@ -1,0 +1,12 @@
+torch>=2.5
+pytest>=8.0
+pyyaml>=5.4
+transformers>=4.44
+accelerate>=1.0
+datasets>=3.0
+sentencepiece
+huggingface_hub
+
+[dense-retrieval]
+sentence-transformers
+faiss-cpu

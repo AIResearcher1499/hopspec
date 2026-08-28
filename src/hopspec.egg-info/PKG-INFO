@@ -1,0 +1,16 @@
+Metadata-Version: 2.4
+Name: hopspec
+Version: 0.1.0
+Summary: Hop-aware speculative decoding for agentic multi-hop RAG
+Requires-Python: >=3.10
+Requires-Dist: torch>=2.5
+Requires-Dist: pytest>=8.0
+Requires-Dist: pyyaml>=5.4
+Requires-Dist: transformers>=4.44
+Requires-Dist: accelerate>=1.0
+Requires-Dist: datasets>=3.0
+Requires-Dist: sentencepiece
+Requires-Dist: huggingface_hub
+Provides-Extra: dense-retrieval
+Requires-Dist: sentence-transformers; extra == "dense-retrieval"
+Requires-Dist: faiss-cpu; extra == "dense-retrieval"

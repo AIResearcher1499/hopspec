@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Draft checkpoints: 1.2 GB each, 5.4 GB total. Transfer out of band and
+# verify by md5 — a bridge measurement against a different checkpoint is a
+# measurement of the wrong thing.
+data/*.pt
+
+# Quarantined partial shard: 70 records of an aborted collect, no value.
+# The README beside it explains the class; the data itself need not travel.
+data/_invalidated/*.jsonl

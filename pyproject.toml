@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hopspec"
+version = "0.1.0"
+description = "Hop-aware speculative decoding for agentic multi-hop RAG"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.5",
+    "pytest>=8.0",
+    "pyyaml>=5.4",
+    "transformers>=4.44",
+    "accelerate>=1.0",
+    "datasets>=3.0",
+    "sentencepiece",
+    "huggingface_hub",
+]
+
+[project.optional-dependencies]
+dense-retrieval = ["sentence-transformers", "faiss-cpu"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

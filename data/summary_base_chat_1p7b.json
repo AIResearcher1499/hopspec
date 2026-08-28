@@ -1,0 +1,118 @@
+{
+  "hop_signal_enabled": false,
+  "alpha": 0.0,
+  "tau": 16.0,
+  "feature_mode": "chat",
+  "views": {
+    "all_positions": [
+      {
+        "bucket": 2,
+        "n": 59,
+        "acceptance": 0.22033898305084745,
+        "distinct_tokens": 45,
+        "majority_rate": 0.15254237288135594,
+        "degenerate": false
+      },
+      {
+        "bucket": 3,
+        "n": 90,
+        "acceptance": 0.13333333333333333,
+        "distinct_tokens": 71,
+        "majority_rate": 0.044444444444444446,
+        "degenerate": false
+      },
+      {
+        "bucket": 4,
+        "n": 46,
+        "acceptance": 0.15217391304347827,
+        "distinct_tokens": 32,
+        "majority_rate": 0.10869565217391304,
+        "degenerate": false
+      },
+      {
+        "bucket": 5,
+        "n": 2,
+        "acceptance": 0.5,
+        "distinct_tokens": 2,
+        "majority_rate": 0.5,
+        "degenerate": true
+      },
+      {
+        "bucket": 6,
+        "n": 206,
+        "acceptance": 0.16990291262135923,
+        "distinct_tokens": 145,
+        "majority_rate": 0.05339805825242718,
+        "degenerate": false
+      }
+    ],
+    "novel_hops_only": [
+      {
+        "bucket": 2,
+        "n": 56,
+        "acceptance": 0.17857142857142858,
+        "distinct_tokens": 45,
+        "majority_rate": 0.10714285714285714,
+        "degenerate": false
+      },
+      {
+        "bucket": 3,
+        "n": 90,
+        "acceptance": 0.13333333333333333,
+        "distinct_tokens": 71,
+        "majority_rate": 0.044444444444444446,
+        "degenerate": false
+      },
+      {
+        "bucket": 4,
+        "n": 46,
+        "acceptance": 0.15217391304347827,
+        "distinct_tokens": 32,
+        "majority_rate": 0.10869565217391304,
+        "degenerate": false
+      },
+      {
+        "bucket": 5,
+        "n": 2,
+        "acceptance": 0.5,
+        "distinct_tokens": 2,
+        "majority_rate": 0.5,
+        "degenerate": true
+      }
+    ],
+    "matched_cohort": [
+      {
+        "bucket": 2,
+        "n": 20,
+        "acceptance": 0.05,
+        "distinct_tokens": 20,
+        "majority_rate": 0.05,
+        "degenerate": false
+      },
+      {
+        "bucket": 3,
+        "n": 64,
+        "acceptance": 0.15625,
+        "distinct_tokens": 51,
+        "majority_rate": 0.0625,
+        "degenerate": false
+      },
+      {
+        "bucket": 4,
+        "n": 46,
+        "acceptance": 0.15217391304347827,
+        "distinct_tokens": 32,
+        "majority_rate": 0.10869565217391304,
+        "degenerate": false
+      },
+      {
+        "bucket": 5,
+        "n": 2,
+        "acceptance": 0.5,
+        "distinct_tokens": 2,
+        "majority_rate": 0.5,
+        "degenerate": true
+      }
+    ]
+  }
+}
