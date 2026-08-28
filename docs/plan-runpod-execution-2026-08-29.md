@@ -40,9 +40,15 @@ exists precisely so re-slicing never needs a GPU. Keep it that way.
 
 Four consequences, each of which costs real money if ignored:
 
-1. **Keep a persistent volume** for the HuggingFace cache and the draft
-   checkpoints. Re-downloading `Qwen/Qwen3-1.7B` (~3.4 GB) every session is
-   billed; re-training a checkpoint you already paid for is worse.
+1. **Do not rent a network volume for this project.** Checked live
+   (2026-08-29): the account has none, and at these prices a standing volume
+   would cost more per month than the compute it saves. Instead keep each
+   session self-contained — collect, train and evaluate in one pod — so no
+   checkpoint has to survive between sessions. Re-downloading
+   `Qwen/Qwen3-1.7B` (~3.4 GB) costs a few minutes, which at $0.34/hr is
+   cents. This also sidesteps the constraint that the cheapest large-VRAM
+   cards live in datacenters with `storageSupport: false` and can never be
+   paired with a volume at all.
 2. **Launch long jobs detached** — `nohup … > log 2>&1 < /dev/null & disown`,
    confirm `PPID=1` (spec §1). A dropped connection must not kill a job you
    are paying for.
@@ -75,6 +81,20 @@ forwards.
 > **The GPU figures below are extrapolations, not measurements** — MPS timings
 > plus FLOP counting. Session 1 produces the first real CUDA datapoint;
 > recalibrate before budgeting session 2.
+
+Live RunPod prices for cards with enough VRAM (2026-08-29; `Qwen3-1.7B` in
+bf16 needs far less than any of them):
+
+| GPU | VRAM | $/hr | stock |
+|---|---|---|---|
+| RTX PRO 4500 | 32 GB | 0.34 | High |
+| RTX A6000 | 48 GB | 0.33 | Low |
+| A40 | 48 GB | 0.35 | Low |
+
+At ~$0.34/hr the **3–5 h of immediate work costs about $1–2**, and the
+15–30 h covering everything foreseeable costs **$5–10**. The budget question
+is therefore not "can we afford this" but "do not leave a pod running by
+accident" — a forgotten pod costs more than the entire research programme.
 
 ## 3. Status of the remaining work
 

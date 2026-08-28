@@ -11,7 +11,13 @@
 set -euo pipefail
 
 DEVICE="${1:-cuda}"
-PY="${PY:-.venv/bin/python}"
+# A rented pod usually installs into the image's own python; a .venv only
+# exists on a dev machine. Defaulting blindly to .venv/bin/python cost a
+# billed run that exited in 0.004s with "No such file or directory".
+if [ -z "${PY:-}" ]; then
+  if [ -x .venv/bin/python ]; then PY=.venv/bin/python; else PY=python; fi
+fi
+"$PY" -c "import hopspec" 2>/dev/null || { echo "hopspec not importable by $PY"; exit 1; }
 MODEL="${MODEL:-Qwen/Qwen3-1.7B}"
 SHARD="${SHARD:-data/shard_1p7b.jsonl}"
 
