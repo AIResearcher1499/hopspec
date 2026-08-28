@@ -16,3 +16,11 @@ data/_invalidated/*.jsonl
 # indefensible in our own work, and anticipated-review reasoning. Not needed to
 # reproduce anything, and a process leak in a public anonymous release.
 docs/novelty-verdict-*.md
+
+# The 1000-record shard is 17 MB of HotpotQA prose. It trips the anonymity
+# checker on benchmark text (accented proper nouns such as "Wom\xc3\xa9", phrases
+# like "co-written by"), which are false positives but make the gate useless if
+# left to fail every run. It is regenerable from 01_generate_trajectories.py +
+# data/hotpot_split.json, and being batch-collected it is not byte-reproducible
+# anyway. Its md5 and provenance are in docs/scaleup-result-2026-08-29.md.
+data/shard_1p7b_scale.jsonl
