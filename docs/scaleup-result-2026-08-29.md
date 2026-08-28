@@ -87,6 +87,25 @@ neural arm — and the scaffold still wins 968 TEMPLATE tokens against 862
 content tokens surrendered. A grammar drafter is not a crutch for a weak
 draft at this scale; it is additive.
 
+**Caveat on the statistic, found while writing this up.** The prereg justified
+`net_trade` with "both arms open the same lookup rounds, so the difference is
+the scaffold's displacement of the neural draft". At this scale that premise
+is only approximately true: routed opens 811 lookup rounds, the comparator 764
+— a 47-round gap, where the pilot had none. Decomposing the content
+difference by source removes the need for the assumption:
+
+| source | routed | entropy | difference |
+|---|---|---|---|
+| lookup | 1583 | 1569 | +14 |
+| neural | 839 | 1715 | **−876** |
+| total content | 2422 | 3284 | −862 |
+
+The deficit is essentially all neural displacement (−876), with the lookup
+contribution nearly cancelling (+14). So the conclusion survives the imperfect
+premise, and the decomposition — not the assumption — is what should be
+quoted. Future preregs should define `net_trade` against the neural row
+directly.
+
 Recorded as a failed prediction, not narrated as a success. What it licenses
 is narrow: at 1.7B, with this draft, on this shard, the trade is positive. The
 mechanism that would flip it is unchanged and still plausible at a larger
