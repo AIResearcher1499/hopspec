@@ -69,6 +69,33 @@ def trajectory_to_record(
     }
 
 
+def collected_question_ids(out_path: str) -> set[str]:
+    """question_ids already in a shard, for --resume.
+
+    Tolerates a truncated final line: a killed collect can leave one, and the
+    whole point of resuming is to survive a kill. A record without a
+    question_id is a corrupt line, not a resumable one, and is ignored — the
+    question is simply re-collected and `06_validate_shard.py`'s duplicate-id
+    check stays the guard against getting that wrong.
+    """
+    if not os.path.exists(out_path):
+        return set()
+    ids: set[str] = set()
+    with open(out_path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue  # truncated tail of a killed run
+            question_id = record.get("question_id")
+            if question_id is not None:
+                ids.add(question_id)
+    return ids
+
+
 def collect_shard(
     questions: Iterable[tuple[str, str]],
     llm: LLM,
@@ -78,12 +105,22 @@ def collect_shard(
     max_hops: int = 4,
     num_docs: int = 3,
     on_record: Callable[[dict], None] | None = None,
+    resume: bool = False,
 ) -> int:
-    """Run trajectories and append records to a jsonl shard. Returns count."""
+    """Run trajectories and append records to a jsonl shard. Returns count.
+
+    The file is opened for APPEND, so a killed run leaves valid partial output
+    — but re-running would collect everything again and duplicate every id.
+    `resume=True` skips question_ids already present. Returns the number of
+    trajectories actually collected on THIS call, not the file's total.
+    """
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+    already = collected_question_ids(out_path) if resume else set()
     count = 0
     with open(out_path, "a", encoding="utf-8") as f:
         for question_id, question in questions:
+            if question_id in already:
+                continue
             trajectory = run_react_trajectory(
                 question, llm, retriever, max_hops=max_hops, num_docs=num_docs
             )
@@ -118,6 +155,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--num-docs", type=int, default=3)
     parser.add_argument("--max-questions", type=int, default=None)
     parser.add_argument("--max-new-tokens", type=int, default=200)
+    parser.add_argument("--resume", action="store_true",
+                        help="skip question_ids already in --out. The output is "
+                             "APPENDED to, so without this a restarted run "
+                             "re-collects everything and duplicates every id.")
     return parser
 
 
@@ -166,9 +207,11 @@ def main(argv: list[str] | None = None) -> int:
 
     count = collect_shard(
         todo, llm, retriever, tokenize, args.out,
-        max_hops=args.max_hops, num_docs=args.num_docs,
+        max_hops=args.max_hops, num_docs=args.num_docs, resume=args.resume,
     )
-    print(f"collected {count} trajectories -> {args.out}")
+    total = len(collected_question_ids(args.out))
+    print(f"collected {count} trajectories this run -> {args.out} "
+          f"({total} unique question ids in the shard)")
     return 0
 
 

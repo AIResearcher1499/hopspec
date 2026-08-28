@@ -1,4 +1,6 @@
-"""Device bridge comparison (plan §2'): CUDA rounds vs the MPS baselines.
+"""Device bridge comparison: CUDA rounds vs the MPS baselines.
+
+See docs/plan-runpod-execution-2026-08-29.md.
 
 The two bridged arms are model-free — `lookup` and `scaffold` propose by
 deterministic rules over the committed token ids, with no draft network and no
@@ -10,7 +12,7 @@ number of rounds diverged.
 The paired per-record statistics are reported only when something actually
 diverged — there is nothing to be statistical about otherwise.
 
-Run on the laptop, not the box (plan §5).
+Run on the Mac, not the rented pod — analysis never needs a GPU.
 """
 
 from __future__ import annotations
@@ -113,7 +115,8 @@ def main() -> int:
         print("VERDICT: byte-identical measurements on both devices.")
         print("The verification path is device-stable on this workload. Report")
         print("that as a result. It does NOT extend to the draft network, which")
-        print("is not exercised by these arms (plan §2', 'what it does not cover').")
+        print("is not exercised by these arms. See the plan for why that is")
+        print("acceptable: the draft is retrained on CUDA anyway.")
     else:
         print("VERDICT: the devices disagree. Report the diverging-round counts")
         print("above, not a hand-wave. Greedy argmax flipping near ties is the")

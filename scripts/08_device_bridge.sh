@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# Device bridge (plan §2'): re-run the two CHECKPOINT-FREE arms on this box so
+# Device bridge (docs/plan-runpod-execution-2026-08-29.md): re-run the two CHECKPOINT-FREE arms on the pod so
 # their rounds can be compared against the MPS baselines committed in this
 # repository. No weight transfer is needed — that is the point.
 #
 #   bash scripts/08_device_bridge.sh cuda
 #
-# Then copy data/rounds_<device>_{lookup,scaffold}_1p7b.jsonl to the laptop and
-# run scripts/09_device_bridge_compare.py there (plan §5: analysis off the box).
+# Then copy data/rounds_<device>_{lookup,scaffold}_1p7b.jsonl to the Mac and run
+# scripts/09_device_bridge_compare.py there: analysis never needs a GPU, and a
+# rented pod is billed by the hour.
 set -euo pipefail
 
 DEVICE="${1:-cuda}"
@@ -32,5 +33,5 @@ echo "### arm: scaffold, verb bet (model-free)"
   --rounds-out "data/rounds_${DEVICE}_scaffold_1p7b.jsonl"
 
 echo
-echo "done. bring these back to the laptop:"
+echo "done. bring these back to the Mac:"
 ls -la "data/rounds_${DEVICE}_lookup_1p7b.jsonl" "data/rounds_${DEVICE}_scaffold_1p7b.jsonl"

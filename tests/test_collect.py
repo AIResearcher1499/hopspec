@@ -79,3 +79,77 @@ def test_collect_shard_on_record_callback(tmp_path, retriever):
         on_record=seen.append,
     )
     assert len(seen) == 1
+
+
+# ---- --resume (migration plan §4) ----
+#
+# collect_shard opens the output for APPEND, so a killed run leaves valid
+# partial output but a naive restart re-collects everything and duplicates
+# every id. On a rented box a killed run is normal, not exceptional.
+
+from hopspec.data.collect import collected_question_ids
+
+
+def test_collected_question_ids_reads_a_shard(retriever, tmp_path):
+    out = tmp_path / "shard.jsonl"
+    questions = [(f"q{i}", f"Question {i}?") for i in range(3)]
+    collect_shard(questions, MockLLM(TWO_HOP_RESPONSES * 3), retriever,
+                  simple_offset_tokenizer, str(out))
+    assert collected_question_ids(str(out)) == {"q0", "q1", "q2"}
+
+
+def test_collected_question_ids_on_a_missing_file():
+    assert collected_question_ids("/nonexistent/shard.jsonl") == set()
+
+
+def test_collected_question_ids_tolerates_a_truncated_tail(retriever, tmp_path):
+    """A killed collect can leave a half-written final line. Surviving that is
+    the entire point of resuming."""
+    out = tmp_path / "shard.jsonl"
+    collect_shard([("q0", "Question 0?")], MockLLM(list(TWO_HOP_RESPONSES)),
+                  retriever, simple_offset_tokenizer, str(out))
+    with open(out, "a", encoding="utf-8") as f:
+        f.write('{"question_id": "q1", "context": "half a rec')
+    assert collected_question_ids(str(out)) == {"q0"}
+
+
+def test_resume_appends_only_the_missing_records(retriever, tmp_path):
+    out = tmp_path / "shard.jsonl"
+    questions = [(f"q{i}", f"Question {i}?") for i in range(5)]
+
+    first = collect_shard(questions[:3], MockLLM(TWO_HOP_RESPONSES * 3), retriever,
+                          simple_offset_tokenizer, str(out))
+    assert first == 3
+
+    # the same full question list, resumed: only the two new ones are collected
+    second = collect_shard(questions, MockLLM(TWO_HOP_RESPONSES * 5), retriever,
+                           simple_offset_tokenizer, str(out), resume=True)
+    assert second == 2
+
+    ids = [json.loads(line)["question_id"] for line in open(out, encoding="utf-8")]
+    assert ids == ["q0", "q1", "q2", "q3", "q4"]
+    # the duplicate-id check in 06_validate_shard.py must stay clean
+    assert len(ids) == len(set(ids))
+
+
+def test_resume_is_a_no_op_when_everything_is_collected(retriever, tmp_path):
+    out = tmp_path / "shard.jsonl"
+    questions = [(f"q{i}", f"Question {i}?") for i in range(3)]
+    collect_shard(questions, MockLLM(TWO_HOP_RESPONSES * 3), retriever,
+                  simple_offset_tokenizer, str(out))
+    again = collect_shard(questions, MockLLM(TWO_HOP_RESPONSES * 3), retriever,
+                          simple_offset_tokenizer, str(out), resume=True)
+    assert again == 0
+    assert sum(1 for _ in open(out, encoding="utf-8")) == 3
+
+
+def test_without_resume_a_restart_duplicates_every_id(retriever, tmp_path):
+    """Pins the failure mode --resume exists to prevent, so nobody 'simplifies'
+    the flag away."""
+    out = tmp_path / "shard.jsonl"
+    questions = [(f"q{i}", f"Question {i}?") for i in range(3)]
+    for _ in range(2):
+        collect_shard(questions, MockLLM(TWO_HOP_RESPONSES * 3), retriever,
+                      simple_offset_tokenizer, str(out))
+    ids = [json.loads(line)["question_id"] for line in open(out, encoding="utf-8")]
+    assert len(ids) == 6 and len(set(ids)) == 3
