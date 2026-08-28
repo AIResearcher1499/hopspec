@@ -24,3 +24,6 @@ docs/novelty-verdict-*.md
 # data/hotpot_split.json, and being batch-collected it is not byte-reproducible
 # anyway. Its md5 and provenance are in docs/scaleup-result-2026-08-29.md.
 data/shard_1p7b_scale.jsonl
+
+# 1.2 GB draft checkpoints.
+data/ckpt_base_chat_scale2.pt

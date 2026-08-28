@@ -212,3 +212,49 @@ arms. Therefore:
 
 No gate verdict changes. G1 and G2 are computed from `accepted`, which is
 unaffected.
+
+### Amendment 2026-08-29b, addendum — the re-run protocol, fixed before it runs
+
+Satisfying 2026-08-29b requires `accepted_ids`, which the existing
+`data/rounds_sc_*_1p7b.jsonl` do not carry, so the nine arms must be re-run.
+
+**The checkpoint cannot be reused.** `ckpt_base_chat_scale.pt` existed only on
+the pod, which was terminated without pulling it — an avoidable loss, recorded
+here rather than glossed. The re-run therefore retrains the baseline arm on the
+same shard (`shard_1p7b_scale.jsonl`, md5
+`3b50e71c5526176622fca24cb7449ac4`), same split, same hyperparameters. Training
+is not deterministic across runs, so **the new checkpoint is a different draft
+and the re-run will not reproduce the old numbers.**
+
+Decided now, before any number is seen:
+
+1. The re-run is a **second execution of this same frozen prereg**, not a new
+   prereg. Arms, gates, hypotheses and thresholds are unchanged.
+2. **The re-run supersedes**, because only it satisfies the amended
+   measurement. `rounds_sc_*` become a superseded artifact and are annotated
+   as such, not deleted.
+3. **Both gate outcomes are reported side by side** as two executions with
+   different checkpoints. Whichever way they fall, both are shown. Choosing the
+   more favourable one afterwards would be the exact failure this prereg
+   exists to prevent.
+4. If a gate flips between the two executions, that is the headline — it would
+   mean the gate is not stable to checkpoint reinitialisation at this scale,
+   which matters more than either individual verdict.
+5. The corrected template/content split is computed with
+   `summarize_template_split` against `ScaffoldFSM.literal_token_ids()` from
+   the fit on the **train split of the same shard**, and is reported as an
+   upper bound on the template share for the reason given above.
+
+### Correction to amendment 2026-08-29b, same day
+
+The amendment called the template count an "UPPER bound". That is wrong as
+stated: the classifier errs in **both** directions. The fitted literal set is
+six token ids — `:`, `[`, `\n`, `Action`, `Search`, ` Search` — so it
+over-counts a content `:` or `[`, and it **under-counts** genuine template
+tokens outside the literals, notably `]\n`, which spec §3 calls scaffolding.
+
+Measured on the re-run rather than assumed: tokens accepted that are template
+by §3 but outside the literal set (`]\n`, `]`, `Observation`, ` -`) number
+**0–1 per arm**. So the under-count is negligible in practice and the estimate
+behaves as an upper bound — but it is an approximation with two-sided error,
+and that is how it must be described.

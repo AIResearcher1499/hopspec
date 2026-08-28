@@ -293,3 +293,87 @@ survive the longer shard. Size future rentals at **32 GB or more**.
    it rather than assuming either answer.
 3. The larger target model (8B) is the remaining direction, and the only one
    whose cost is non-trivial (§8 of the execution plan).
+
+---
+
+# Re-run with `accepted_ids` — the corrected template/content split
+
+Prereg amendment 2026-08-29b required a re-run: the old rounds carry no
+accepted token ids, so tokens could only be labelled by proposer. The
+checkpoint could not be reused (it died with the terminated pod), so the
+baseline arm was retrained on the same shard and the nine arms re-run on an
+A40. Artifacts `data/rounds_r2_*_1p7b.jsonl`, checkpoint
+`ckpt_base_chat_scale2.pt`. Per the addendum, this execution **supersedes**
+`rounds_sc_*`, and both gate outcomes are reported side by side.
+
+## The corrected split — classified by token TYPE
+
+| arm | accepted | TEMPLATE | content | template share |
+|---|---|---|---|---|
+| neural | 2283 | **966** | 1317 | **42.3%** |
+| scoped lookup | 1673 | 4 | 1669 | 0.2% |
+| scaffold (verb bet) | 900 | 900 | 0 | 100% |
+| **routed (verb bet)** | 3400 | **1110** | 2290 | 32.6% |
+| entropy-routed | 3338 | **963** | 2375 | 28.8% |
+
+**The audit was right, and the error was larger than it could estimate from
+the old artifacts.** Two claims in the original result are now withdrawn:
+
+- ~~"entropy: 0 TEMPLATE"~~ → the comparator accepts **963 template tokens**,
+  28.8% of everything it accepts, through its neural draft. The audit's lower
+  bound was ≥164; the truth is nearly six times that.
+- ~~"routed accepts 862 fewer content tokens"~~ → the true content deficit is
+  **85 tokens** (2290 vs 2375), 3.6% of content. The old figure was an order
+  of magnitude too large, and it was the whole basis of the "routed sacrifices
+  content" reading. **That reading is withdrawn.**
+
+The most-accepted tokens make the mechanism plain: `:` (377), `Action` (319),
+`[` (250), ` Search` (164) — the ReAct scaffold — then ` the` (154), ` of`
+(88). **The neural draft is 42.3% a scaffold predictor.** It was never a
+content-only source; the old table said it was.
+
+Classifier caveat, per the correction to 2026-08-29b: six literal token ids,
+two-sided error, measured under-count 0–1 tokens per arm.
+
+## Gates: two executions of the same frozen prereg
+
+| execution | G1 routed vs neural | G2 routed vs entropy |
+|---|---|---|
+| run 1 (`rounds_sc_*`) | 1.77×, +0.557 [+0.487, +0.629] **PASS** | +0.1338 [+0.1056, +0.1626] **PASS** |
+| run 2 (`rounds_r2_*`, supersedes) | 1.63×, +0.497 [+0.425, +0.572] **PASS** | +0.0799 [+0.0562, +0.1051] **PASS** |
+
+**Neither gate flips.** Both survive a fresh checkpoint, which is the
+stability check the addendum said would be the headline if it failed. G1's
+ratio drops 1.77 → 1.63 and G2's margin roughly halves, so the *magnitudes*
+are checkpoint-sensitive at this scale even though the *verdicts* are not.
+Quote the range, not one run's number.
+
+Run 2 per-arm: routed 2.083 tokens per target verification against neural
+1.540.
+
+## The like-for-like signal test replicates
+
+Same three sources, precedence versus gating:
+
+| execution | routed-shared − (entropy + scaffold) |
+|---|---|
+| run 1 | +0.0051 [−0.0000, +0.0110] |
+| run 2 | +0.0059 [−0.0003, +0.0128] |
+
+**A tie, twice, with the interval touching zero both times.** Structure
+routing and entropy routing are indistinguishable as *signals*. G2's margin
+comes from the source set, not the signal — and in run 2 the shared-prefix
+router actually loses to the comparator, −0.0315 [−0.0595, −0.0047], where in
+run 1 it merely tied.
+
+## What changes in the conclusions
+
+- **G1 stands**, in both executions, on a systems quantity.
+- **G2 stands as pre-registered**, and still means "verb-bet scaffold coverage
+  versus none".
+- **The content-sacrifice story is gone.** Routed gives up 85 content tokens,
+  not 862. The systems margin is no longer bought at a visible content cost.
+- **"Routed's margin is TEMPLATE tokens" needs restating.** Both arms are
+  heavily template: 32.6% for routed, 28.8% for the comparator. The margin is
+  +147 template and −85 content. It is still a systems claim, but the
+  comparator is not the content-pure baseline the old table implied.

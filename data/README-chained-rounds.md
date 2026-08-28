@@ -35,7 +35,18 @@ all carry the same handicap) but no raw-mode number is an absolute statement
 about the deployed loop, and any arm whose value sits at a step opening — the
 scaffold FSM above all — is measured where the harness is blind.
 
-## `chat` mode, 1000-record shard, chat-trained draft (CURRENT REFERENCE)
+## `chat` mode, 1000-record shard, re-run with `accepted_ids` (CURRENT REFERENCE)
+
+Files `rounds_r2_*_1p7b.jsonl`, checkpoint `ckpt_base_chat_scale2.pt`, same
+shard. The only set carrying `accepted_ids`, so the only one from which a true
+template/content split can be computed (prereg amendment 2026-08-29b).
+Supersedes `rounds_sc_*`.
+
+## `chat` mode, 1000-record shard, first execution (SUPERSEDED)
+
+`rounds_sc_*` carry no `accepted_ids`; their template/content columns label by
+proposing source, not token type, and are relabelled accordingly. Retained
+because both executions' gate outcomes are reported side by side.
 
 Files `rounds_sc_*_1p7b.jsonl`, shard `shard_1p7b_scale.jsonl`
 (md5 `3b50e71c5526176622fca24cb7449ac4`), checkpoints
