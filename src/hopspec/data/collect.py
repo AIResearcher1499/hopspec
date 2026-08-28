@@ -7,7 +7,11 @@ import json
 import os
 from typing import Callable, Iterable
 
-from hopspec.data.agent_pipeline import LLM, run_react_trajectory
+from hopspec.data.agent_pipeline import (
+    LLM,
+    run_react_trajectories_batched,
+    run_react_trajectory,
+)
 from hopspec.data.question_split import get_or_create_split
 from hopspec.data.retriever import BaseRetriever
 from hopspec.data.schema import Trajectory
@@ -106,6 +110,7 @@ def collect_shard(
     num_docs: int = 3,
     on_record: Callable[[dict], None] | None = None,
     resume: bool = False,
+    batch_size: int = 1,
 ) -> int:
     """Run trajectories and append records to a jsonl shard. Returns count.
 
@@ -114,22 +119,39 @@ def collect_shard(
     `resume=True` skips question_ids already present. Returns the number of
     trajectories actually collected on THIS call, not the file's total.
     """
+    if batch_size < 1:
+        raise ValueError("batch_size must be >= 1")
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
     already = collected_question_ids(out_path) if resume else set()
+    todo = [(qid, q) for qid, q in questions if qid not in already]
     count = 0
     with open(out_path, "a", encoding="utf-8") as f:
-        for question_id, question in questions:
-            if question_id in already:
-                continue
-            trajectory = run_react_trajectory(
-                question, llm, retriever, max_hops=max_hops, num_docs=num_docs
-            )
+
+        def emit(trajectory, question_id: str) -> None:
+            nonlocal count
             record = trajectory_to_record(trajectory, question_id, tokenize)
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
             f.flush()
             if on_record is not None:
                 on_record(record)
             count += 1
+
+        if batch_size == 1:
+            # The original path, untouched. Everything published so far came
+            # off it, so it stays the default and stays byte-identical.
+            for question_id, question in todo:
+                emit(run_react_trajectory(question, llm, retriever,
+                                          max_hops=max_hops, num_docs=num_docs),
+                     question_id)
+        else:
+            for start in range(0, len(todo), batch_size):
+                chunk = todo[start:start + batch_size]
+                trajectories = run_react_trajectories_batched(
+                    [question for _qid, question in chunk], llm, retriever,
+                    max_hops=max_hops, num_docs=num_docs,
+                )
+                for (question_id, _question), trajectory in zip(chunk, trajectories):
+                    emit(trajectory, question_id)
     return count
 
 
@@ -155,6 +177,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--num-docs", type=int, default=3)
     parser.add_argument("--max-questions", type=int, default=None)
     parser.add_argument("--max-new-tokens", type=int, default=200)
+    parser.add_argument("--batch-size", type=int, default=1,
+                        help="generate this many trajectories in lockstep, one "
+                             "generate call per round. Default 1 keeps the "
+                             "original sequential path. Batched matmuls are not "
+                             "bit-identical to single-sequence ones, so a "
+                             "batched shard differs slightly from a sequential "
+                             "one — record that in the shard's provenance.")
     parser.add_argument("--resume", action="store_true",
                         help="skip question_ids already in --out. The output is "
                              "APPENDED to, so without this a restarted run "
@@ -208,6 +237,7 @@ def main(argv: list[str] | None = None) -> int:
     count = collect_shard(
         todo, llm, retriever, tokenize, args.out,
         max_hops=args.max_hops, num_docs=args.num_docs, resume=args.resume,
+        batch_size=args.batch_size,
     )
     total = len(collected_question_ids(args.out))
     print(f"collected {count} trajectories this run -> {args.out} "

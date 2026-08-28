@@ -101,8 +101,8 @@ accident" — a forgotten pod costs more than the entire research programme.
 | Item | Where | Status |
 |---|---|---|
 | §4 resume | Mac | **DONE** — `--resume` on `collect.py`, 6 tests, 334 total green |
-| Device bridge | Pod, then Mac | ready: `scripts/08_device_bridge.sh`, `scripts/09_device_bridge_compare.py` |
-| Batched collection | Mac (build+test), Pod (validate) | **NOT STARTED** — §4 below |
+| Batched collection | Mac (build+test), Pod (validate) | **DONE** — `--batch-size`, 11 tests; the 5-question real-model validation still owes a pod |
+| Device bridge | done | `docs/device-bridge-2026-08-29.md` — MPS is directionally comparable |
 | Scale-up prereg | Mac | **NOT STARTED** |
 
 ## 4. Batched collection — the remaining build, and it is free

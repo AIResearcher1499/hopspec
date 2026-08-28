@@ -76,19 +76,68 @@ class HFTargetLLM:
         self.max_new_tokens = max_new_tokens
         self._torch = torch
 
-    def generate(self, context: str) -> str:
+    def _prompt(self, context: str) -> str:
+        """The ONE chat-template path. `generate` and `generate_batch` both go
+        through it, so a batched shard cannot be prompted differently from a
+        sequential one."""
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": context},
         ]
         try:
-            prompt = self.tokenizer.apply_chat_template(
-                messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
+            return self.tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True,
+                enable_thinking=False,
             )
         except TypeError:  # templates that reject the enable_thinking kwarg
-            prompt = self.tokenizer.apply_chat_template(
+            return self.tokenizer.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True
             )
+
+    def _clean(self, text: str) -> str:
+        return _truncate_to_first_action(_THINK_BLOCK_RE.sub("", text))
+
+    def generate_batch(self, contexts: list[str]) -> list[str]:
+        """One generate call for many live trajectories.
+
+        **Left padding is required, not a preference.** `generate` continues
+        from the right edge of the tensor; with right padding the shorter
+        prompts would be continued from their pad tokens and produce garbage.
+        Left padding also makes every row share one prompt length, which is
+        what lets the generated part be sliced at a single offset.
+
+        Batched matmuls are not bit-identical to single-sequence ones, so a
+        greedy token can flip and a batched shard will differ slightly from a
+        sequential one. That is fine — a shard is data and every downstream
+        arm uses one shard — but it belongs in the shard's provenance and must
+        never be used to explain away a result.
+        """
+        if not contexts:
+            return []
+        prompts = [self._prompt(context) for context in contexts]
+        tokenizer = self.tokenizer
+        if tokenizer.pad_token_id is None:
+            tokenizer.pad_token = tokenizer.eos_token
+        previous_side = tokenizer.padding_side
+        tokenizer.padding_side = "left"
+        try:
+            inputs = tokenizer(prompts, return_tensors="pt", padding=True)
+        finally:
+            tokenizer.padding_side = previous_side
+        inputs = inputs.to(self.device)
+        with self._torch.no_grad():
+            out = self.model.generate(
+                **inputs, max_new_tokens=self.max_new_tokens, do_sample=False
+            )
+        prompt_length = inputs["input_ids"].shape[1]
+        return [
+            self._clean(self.tokenizer.decode(row[prompt_length:],
+                                              skip_special_tokens=True))
+            for row in out
+        ]
+
+    def generate(self, context: str) -> str:
+        prompt = self._prompt(context)
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
         with self._torch.no_grad():
             out = self.model.generate(
@@ -97,10 +146,9 @@ class HFTargetLLM:
         text = self.tokenizer.decode(
             out[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True
         )
-        text = _THINK_BLOCK_RE.sub("", text)
         # Real models ramble past their action and hallucinate their own
         # "Observation:"; truncating stops that entering the context.
-        return _truncate_to_first_action(text)
+        return self._clean(text)
 
 
 def _first_action_match(text: str):
@@ -169,6 +217,70 @@ def _split_generated_step(rendered: str) -> list[TrajectoryStep]:
     return steps
 
 
+class _TrajectoryState:
+    """One in-flight trajectory. Exists so the batched driver can hold many at
+    once; the per-step work itself is `_absorb_step`, shared with the
+    sequential path so the two cannot drift apart."""
+
+    __slots__ = ("question", "steps", "context", "final_answer", "is_complete",
+                 "hop", "turns")
+
+    def __init__(self, question: str):
+        self.question = question
+        self.steps = [
+            TrajectoryStep(SegmentType.TEMPLATE, "Question: "),
+            TrajectoryStep(SegmentType.QUESTION, question),
+            TrajectoryStep(SegmentType.TEMPLATE, "\n"),
+        ]
+        self.context = f"Question: {question}\n"
+        self.final_answer: str | None = None
+        self.is_complete = False
+        self.hop = 0
+        self.turns = 0
+
+    def done(self, max_hops: int) -> bool:
+        return self.is_complete or self.turns >= max_hops
+
+    def trajectory(self) -> Trajectory:
+        return Trajectory(
+            question=self.question, steps=self.steps,
+            final_answer=self.final_answer, is_complete=self.is_complete,
+            context=self.context,
+        )
+
+
+def _absorb_step(state: _TrajectoryState, raw: str, retriever: BaseRetriever,
+                 num_docs: int) -> None:
+    """Absorb one generated step into a trajectory.
+
+    THE one place that turns model output into steps and context. Everything
+    that has ever produced a bug lives here — the step/context invariant, the
+    span slicing, the truncation, the retrieval append — so the batched driver
+    reuses it verbatim rather than reimplementing it.
+    """
+    raw = _truncate_to_first_action(raw)  # idempotent; HFTargetLLM already applies
+    rendered = raw.rstrip("\n") + "\n"
+    state.steps.extend(_split_generated_step(rendered))
+    state.context += rendered
+    state.turns += 1
+
+    match, payload_type = _first_action_match(rendered)
+    if match is not None and payload_type is SegmentType.ANSWER:
+        state.final_answer = match.group(1).strip()
+        state.is_complete = True
+        return
+    if match is not None and payload_type is SegmentType.TOOL_CALL:
+        docs = retriever.search(match.group(1).strip(), num_docs)
+        passage = _format_passage(docs) + "\n"
+        state.steps.append(
+            TrajectoryStep(SegmentType.RETRIEVED_PASSAGE, passage, hop_index=state.hop)
+        )
+        state.context += passage
+        state.hop += 1
+    # Malformed step (no action): keep it in context and give the model
+    # another turn; the step was emitted as THOUGHT/OTHER above.
+
+
 def run_react_trajectory(
     question: str,
     llm: LLM,
@@ -177,41 +289,43 @@ def run_react_trajectory(
     num_docs: int = 3,
 ) -> Trajectory:
     """Run the ReAct loop, building context and verbatim-slice steps in lockstep."""
-    steps = [
-        TrajectoryStep(SegmentType.TEMPLATE, "Question: "),
-        TrajectoryStep(SegmentType.QUESTION, question),
-        TrajectoryStep(SegmentType.TEMPLATE, "\n"),
-    ]
-    context = f"Question: {question}\n"
-    final_answer: str | None = None
-    is_complete = False
-    hop = 0
-
+    state = _TrajectoryState(question)
     for _ in range(max_hops):
-        raw = llm.generate(context)
-        raw = _truncate_to_first_action(raw)  # idempotent; HFTargetLLM already applies
-        rendered = raw.rstrip("\n") + "\n"
-        steps.extend(_split_generated_step(rendered))
-        context += rendered
-
-        match, payload_type = _first_action_match(rendered)
-        if match is not None and payload_type is SegmentType.ANSWER:
-            final_answer = match.group(1).strip()
-            is_complete = True
+        _absorb_step(state, llm.generate(state.context), retriever, num_docs)
+        if state.is_complete:
             break
-        if match is not None and payload_type is SegmentType.TOOL_CALL:
-            docs = retriever.search(match.group(1).strip(), num_docs)
-            passage = _format_passage(docs) + "\n"
-            steps.append(TrajectoryStep(SegmentType.RETRIEVED_PASSAGE, passage, hop_index=hop))
-            context += passage
-            hop += 1
-        # Malformed step (no action): keep it in context and give the model
-        # another turn; the step was emitted as THOUGHT/OTHER above.
+    return state.trajectory()
 
-    return Trajectory(
-        question=question,
-        steps=steps,
-        final_answer=final_answer,
-        is_complete=is_complete,
-        context=context,
-    )
+
+def run_react_trajectories_batched(
+    questions: list[str],
+    llm,
+    retriever: BaseRetriever,
+    max_hops: int = 4,
+    num_docs: int = 3,
+) -> list[Trajectory]:
+    """Run many ReAct loops in lockstep, one `generate_batch` per round.
+
+    An active set, not a fixed grid: trajectories retire independently the
+    moment they emit a Finish or exhaust `max_hops`, and the batch shrinks.
+    A 1-hop question does not wait for a 4-hop one.
+
+    Per-trajectory work is `_absorb_step`, unchanged and shared with
+    `run_react_trajectory`, so for a given sequence of model outputs the two
+    produce identical trajectories — steps, context and labels. Only the
+    generate call differs.
+    """
+    states = [_TrajectoryState(question) for question in questions]
+    for _ in range(max_hops):
+        active = [state for state in states if not state.done(max_hops)]
+        if not active:
+            break
+        outputs = llm.generate_batch([state.context for state in active])
+        if len(outputs) != len(active):
+            raise ValueError(
+                f"generate_batch returned {len(outputs)} outputs for "
+                f"{len(active)} contexts"
+            )
+        for state, raw in zip(active, outputs):
+            _absorb_step(state, raw, retriever, num_docs)
+    return [state.trajectory() for state in states]
