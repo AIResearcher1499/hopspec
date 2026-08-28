@@ -11,3 +11,8 @@ data/*.pt
 # Quarantined partial shard: 70 records of an aborted collect, no value.
 # The README beside it explains the class; the data itself need not travel.
 data/_invalidated/*.jsonl
+
+# Internal strategy/positioning notes: competitive framing, what we consider
+# indefensible in our own work, and anticipated-review reasoning. Not needed to
+# reproduce anything, and a process leak in a public anonymous release.
+docs/novelty-verdict-*.md
