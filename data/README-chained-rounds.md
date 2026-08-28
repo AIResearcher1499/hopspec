@@ -35,7 +35,19 @@ all carry the same handicap) but no raw-mode number is an absolute statement
 about the deployed loop, and any arm whose value sits at a step opening — the
 scaffold FSM above all — is measured where the harness is blind.
 
-## `chat` mode, chat-TRAINED draft (current)
+## `chat` mode, 1000-record shard, chat-trained draft (CURRENT REFERENCE)
+
+Files `rounds_sc_*_1p7b.jsonl`, shard `shard_1p7b_scale.jsonl`
+(md5 `3b50e71c5526176622fca24cb7449ac4`), checkpoints
+`ckpt_{base,hop}_chat_scale.pt`, prereg `docs/prereg-scaleup-2026-08-29.md`,
+results `docs/scaleup-result-2026-08-29.md`.
+
+Collected on CUDA with `--batch-size 8`, so **not reproducible by a sequential
+run** (3/5 trajectories matched `--batch-size 1` in the validation). 150
+held-out records. This is the current reference measurement and may not be
+compared with any set below.
+
+## `chat` mode, 120-record shard, chat-trained draft (superseded)
 
 Files `rounds_ct_*_1p7b.jsonl`, checkpoints `ckpt_{base,hop}_chat_1p7b.pt`
 (each records `feature_mode: chat`), prereg

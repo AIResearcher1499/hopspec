@@ -1,0 +1,142 @@
+{
+  "hop_signal_enabled": true,
+  "alpha": 2.0,
+  "tau": 16.0,
+  "feature_mode": "chat",
+  "views": {
+    "all_positions": [
+      {
+        "bucket": 1,
+        "n": 6,
+        "acceptance": 0.16666666666666666,
+        "distinct_tokens": 2,
+        "majority_rate": 0.8333333333333334,
+        "degenerate": true
+      },
+      {
+        "bucket": 2,
+        "n": 486,
+        "acceptance": 0.35390946502057613,
+        "distinct_tokens": 278,
+        "majority_rate": 0.17078189300411523,
+        "degenerate": false
+      },
+      {
+        "bucket": 3,
+        "n": 883,
+        "acceptance": 0.2955832389580974,
+        "distinct_tokens": 427,
+        "majority_rate": 0.04756511891279728,
+        "degenerate": false
+      },
+      {
+        "bucket": 4,
+        "n": 631,
+        "acceptance": 0.3201267828843106,
+        "distinct_tokens": 322,
+        "majority_rate": 0.060221870047543584,
+        "degenerate": false
+      },
+      {
+        "bucket": 5,
+        "n": 406,
+        "acceptance": 0.30049261083743845,
+        "distinct_tokens": 199,
+        "majority_rate": 0.054187192118226604,
+        "degenerate": false
+      },
+      {
+        "bucket": 6,
+        "n": 2445,
+        "acceptance": 0.298159509202454,
+        "distinct_tokens": 1054,
+        "majority_rate": 0.03721881390593047,
+        "degenerate": false
+      }
+    ],
+    "novel_hops_only": [
+      {
+        "bucket": 1,
+        "n": 5,
+        "acceptance": 0.2,
+        "distinct_tokens": 2,
+        "majority_rate": 0.8,
+        "degenerate": true
+      },
+      {
+        "bucket": 2,
+        "n": 458,
+        "acceptance": 0.31877729257641924,
+        "distinct_tokens": 277,
+        "majority_rate": 0.1331877729257642,
+        "degenerate": false
+      },
+      {
+        "bucket": 3,
+        "n": 867,
+        "acceptance": 0.2964244521337947,
+        "distinct_tokens": 427,
+        "majority_rate": 0.0461361014994233,
+        "degenerate": false
+      },
+      {
+        "bucket": 4,
+        "n": 607,
+        "acceptance": 0.31795716639209226,
+        "distinct_tokens": 317,
+        "majority_rate": 0.060955518945634266,
+        "degenerate": false
+      },
+      {
+        "bucket": 5,
+        "n": 349,
+        "acceptance": 0.28939828080229224,
+        "distinct_tokens": 199,
+        "majority_rate": 0.054441260744985676,
+        "degenerate": false
+      }
+    ],
+    "matched_cohort": [
+      {
+        "bucket": 1,
+        "n": 6,
+        "acceptance": 0.16666666666666666,
+        "distinct_tokens": 2,
+        "majority_rate": 0.8333333333333334,
+        "degenerate": true
+      },
+      {
+        "bucket": 2,
+        "n": 221,
+        "acceptance": 0.19909502262443438,
+        "distinct_tokens": 164,
+        "majority_rate": 0.058823529411764705,
+        "degenerate": false
+      },
+      {
+        "bucket": 3,
+        "n": 688,
+        "acceptance": 0.2863372093023256,
+        "distinct_tokens": 343,
+        "majority_rate": 0.050872093023255814,
+        "degenerate": false
+      },
+      {
+        "bucket": 4,
+        "n": 631,
+        "acceptance": 0.3201267828843106,
+        "distinct_tokens": 322,
+        "majority_rate": 0.060221870047543584,
+        "degenerate": false
+      },
+      {
+        "bucket": 5,
+        "n": 406,
+        "acceptance": 0.30049261083743845,
+        "distinct_tokens": 199,
+        "majority_rate": 0.054187192118226604,
+        "degenerate": false
+      }
+    ]
+  }
+}
