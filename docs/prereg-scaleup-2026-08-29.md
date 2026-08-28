@@ -159,3 +159,56 @@ This is also why H1 is defined as a within-run statistic rather than as
 - The fitted scaffold opening covers < 50% of generated steps → report it and
   treat the scaffold arm as inapplicable to this shard rather than tuning the
   FSM to rescue it.
+
+---
+
+## Amendment 2026-08-29b — the TEMPLATE/content split was not what §6 asked for
+
+Appended after an adversarial audit
+(`docs/audit-scaleup-2026-08-29.md`, item 1). Nothing above is edited.
+
+**What §6 required:** "the TEMPLATE/content split for every arm … any margin
+carried by TEMPLATE tokens is a systems margin". TEMPLATE is a *segment type*
+(spec §3).
+
+**What was actually reported:** a split by *proposing source* — scaffold-
+proposed versus everything else. Those are different quantities, and the
+difference is not cosmetic. The audit's demonstration, which I reproduced:
+at bucket 0 the comparator arm accepts **164 tokens through its NEURAL
+draft**, at step openings, where the target's next tokens are the ReAct
+scaffold by construction. Every one was counted as "content", so the
+comparator's reported "0 TEMPLATE" is false and the "862 fewer content
+tokens" figure is an upper bound.
+
+**Measurement change, effective now.** Round rows gain `accepted_ids`, the
+token ids actually accepted, so tokens can be classified by TYPE rather than
+by proposer. `summarize_template_split(rounds, template_token_ids)` does the
+classification offline against the fitted scaffold literals
+(`ScaffoldFSM.literal_token_ids()`), and reports rows lacking `accepted_ids`
+as `unclassifiable` so a pre-change artifact can never be pooled with a
+post-change one.
+
+**The classification is an approximation and must be quoted as one.** Accepted
+tokens diverge from the recorded trajectory, so they carry no segment labels;
+literal-membership is the only classifier available from a round row. A
+content token that happens to share an id with a literal's token (`:`) counts
+as template, so the template count is an **upper bound**.
+
+**Consequences for `data/rounds_sc_*_1p7b.jsonl`, which predate this.** They
+carry no `accepted_ids` and cannot be reclassified without re-running the
+arms. Therefore:
+
+1. Every TEMPLATE/content column in `docs/scaleup-result-2026-08-29.md` is
+   relabelled **scaffold-proposed / other-proposed**, which is what it
+   actually measures.
+2. H1's `net_trade` is a scaffold-proposed statistic, not a template
+   statistic. Its SIGN is robust — reclassifying the bucket-0 tokens alone
+   moves it from +106 to ≥ +270 — but the magnitude is not a measurement of
+   what §5 defined.
+3. The per-bucket majority-class rates that §6 and spec §10 require for the
+   chained table **cannot be produced** from these artifacts: the rows carry
+   no target tokens. This is recorded as a requirement not met, not waived.
+   `accepted_ids` makes it producible from the next run onward.
+
+No gate verdict changes. G1 and G2 are computed from `accepted`, which is
+unaffected.

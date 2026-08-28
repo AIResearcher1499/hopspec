@@ -210,6 +210,13 @@ class ScaffoldFSM:
             return "\n"
         return None
 
+    def literal_token_ids(self) -> set[int]:
+        """Every token id this FSM can emit, for offline template/content
+        classification. Approximate by construction: a content token that
+        shares an id with a literal's token counts as template, so any count
+        built from this is an UPPER bound on the template share."""
+        return {int(t) for ids in self._encoded.values() for t in ids}
+
     def next_span(
         self, ids: Sequence[int], segments: Sequence[int], max_tokens: int
     ) -> list[int]:

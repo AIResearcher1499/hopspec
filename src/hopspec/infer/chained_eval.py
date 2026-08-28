@@ -619,6 +619,7 @@ def replay_record(
             ):
                 distance = tracker.distance
                 round_gamma = policy.gamma_for(recency_bucket_id(distance))
+                before = len(speculator.ids)
                 new_ids, accepted = run_speculative_round(
                     _begin(speculator, distance), draft, speculator,
                     tracker, policy,
@@ -642,6 +643,12 @@ def replay_record(
                     # gate discriminated is a measurement rather than an
                     # inference from a flat tuning table. None for the rest.
                     "gate_signal": getattr(draft, "last_entropy", None),
+                    # The accepted tokens themselves. Without them a round row
+                    # can only say WHICH DRAFTER proposed a token, not what
+                    # KIND of token it is — and "the scaffold proposed it" is
+                    # not the same claim as "it is a TEMPLATE token" (spec §3).
+                    # An audit found the two silently conflated.
+                    "accepted_ids": list(new_ids[before:before + accepted]),
                 })
                 produced += emitted
                 round_count += 1
@@ -735,3 +742,43 @@ def record_means(rounds: list[dict]) -> dict[str, float]:
         key: sum(values) / len(values)
         for key, values in sorted(by_record.items())
     }
+
+
+def summarize_template_split(
+    rounds: list[dict], template_token_ids
+) -> dict[str, dict]:
+    """source -> {accepted, template, content} over ACCEPTED tokens.
+
+    Classifies by TOKEN TYPE, not by which drafter proposed it. Needs
+    `accepted_ids` on the rows (added 2026-08-29); rows without it are
+    reported under `unclassifiable` so an old artifact cannot be silently
+    mixed with a new one.
+
+    **This is an approximation and must be quoted as one.** Accepted tokens
+    diverge from the recorded trajectory, so they carry no segment labels;
+    the only available classifier is membership in the fitted scaffold
+    literals' token ids. A content token that happens to be a literal's token
+    (`:` say) is counted as template, so the template count is an UPPER bound.
+    """
+    template_token_ids = {int(t) for t in template_token_ids}
+    summary: dict[str, dict] = {}
+    unclassifiable = 0
+    for row in rounds:
+        ids = row.get("accepted_ids")
+        sources = row.get("token_sources") or []
+        if ids is None:
+            unclassifiable += row.get("accepted", 0)
+            continue
+        for index, token in enumerate(ids):
+            source = sources[index] if index < len(sources) else "unknown"
+            bucket = summary.setdefault(
+                source, {"accepted": 0, "template": 0, "content": 0}
+            )
+            bucket["accepted"] += 1
+            key = "template" if int(token) in template_token_ids else "content"
+            bucket[key] += 1
+    if unclassifiable:
+        summary["unclassifiable"] = {
+            "accepted": unclassifiable, "template": None, "content": None
+        }
+    return summary

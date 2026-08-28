@@ -695,3 +695,61 @@ def test_forced_prefix_cannot_exceed_the_budget(routed_records):
     commit_prefix(speculator, routed_records[0])
     with pytest.raises(ValueError, match="longer than the proposal budget"):
         speculator.propose(speculator.ids, 1, forced_prefix=[1, 2, 3])
+
+
+# ---- token-type classification (audit 2026-08-29, item 1) ----
+#
+# "the scaffold proposed it" is not the same claim as "it is a TEMPLATE
+# token". An audit found the result doc conflating the two: the comparator
+# accepts scaffold tokens through its NEURAL draft at step openings, and every
+# one was counted as content.
+
+def test_fsm_exposes_its_literal_token_ids(routed_tokenizer):
+    fsm = ScaffoldFSM(routed_tokenizer, action_verb="Search")
+    ids = fsm.literal_token_ids()
+    assert ids
+    for literal in (DEFAULT_STEP_OPENING, ACTION_PREFIX, "\n"):
+        assert set(routed_tokenizer.encode(literal)) <= ids
+
+
+def test_template_split_classifies_by_token_not_by_proposer(routed_tokenizer):
+    """The load-bearing test: a token proposed by the NEURAL draft that is a
+    scaffold token must be counted as TEMPLATE."""
+    from hopspec.infer.chained_eval import summarize_template_split
+
+    fsm = ScaffoldFSM(routed_tokenizer)
+    template = fsm.literal_token_ids()
+    scaffold_token = routed_tokenizer.encode(DEFAULT_STEP_OPENING)[0]
+    content_token = max(template) + 1
+    rounds = [
+        # the neural draft accepting a scaffold token — the audit's case
+        {"accepted": 2, "token_sources": ["neural", "neural"],
+         "accepted_ids": [scaffold_token, content_token]},
+        {"accepted": 1, "token_sources": ["scaffold"],
+         "accepted_ids": [scaffold_token]},
+    ]
+    summary = summarize_template_split(rounds, template)
+    assert summary["neural"] == {"accepted": 2, "template": 1, "content": 1}
+    assert summary["scaffold"] == {"accepted": 1, "template": 1, "content": 0}
+
+
+def test_template_split_flags_rows_without_token_ids(routed_tokenizer):
+    """Artifacts written before the change carry no accepted_ids. They must be
+    reported as unclassifiable, never silently pooled with new ones."""
+    from hopspec.infer.chained_eval import summarize_template_split
+
+    summary = summarize_template_split(
+        [{"accepted": 3, "token_sources": ["neural"] * 3}], {1, 2}
+    )
+    assert summary["unclassifiable"]["accepted"] == 3
+    assert summary["unclassifiable"]["template"] is None
+
+
+def test_replay_logs_the_accepted_token_ids(routed_records, routed_tokenizer):
+    speculator = routed_speculator()
+    record = routed_records[0]
+    rounds = replay_record(record, speculator, gamma=GAMMA)
+    for row in rounds:
+        assert len(row["accepted_ids"]) == row["accepted"]
+    # and they are the tokens actually committed, not the proposals
+    assert all(isinstance(t, int) for row in rounds for t in row["accepted_ids"])

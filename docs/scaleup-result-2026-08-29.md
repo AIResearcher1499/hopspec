@@ -1,5 +1,14 @@
 # Result: scale-up to 1000 trajectories — 2026-08-29
 
+> **REVISED 2026-08-29 after an adversarial audit**
+> (`docs/audit-scaleup-2026-08-29.md`). Every number below was recomputed
+> independently and holds; three of the *claims* built on them did not.
+> Changed: the TEMPLATE/content columns are relabelled **scaffold-proposed /
+> other-proposed** (they never measured token type — prereg amendment
+> 2026-08-29b); H1's generalisation is retracted; the shared-prefix results
+> are promoted out of the secondary table because they change what G2 means.
+> Both gate verdicts stand.
+
 Executes `docs/prereg-scaleup-2026-08-29.md`. Arms, gates, hypotheses and the
 "material" thresholds were all fixed before collection.
 
@@ -27,7 +36,7 @@ trigger: `Action:` covers 88%.
 
 Primary arms:
 
-| arm | rounds | pooled | per-record | ratio vs neural | paired delta [95% boot] | sign p | TEMPLATE / content |
+| arm | rounds | pooled | per-record | ratio vs neural | paired delta [95% boot] | sign p | scaffold-proposed / other |
 |---|---|---|---|---|---|---|---|
 | neural | 4267 | 0.525 | 0.727 | 1.00x | — | — | 0 / 2240 |
 | scoped lookup | 4839 | 0.348 | 0.312 | 0.43x | −0.415 [−0.525, −0.306] | <0.001 | 0 / 1683 |
@@ -37,7 +46,7 @@ Primary arms:
 
 Secondary (reported, never used to decide a gate):
 
-| arm | rounds | pooled | per-record | ratio | TEMPLATE / content |
+| arm | rounds | pooled | per-record | ratio | scaffold-proposed / other |
 |---|---|---|---|---|---|
 | scaffold, shared prefix | 5806 | 0.118 | 0.208 | 0.29x | 688 / 0 |
 | routed, shared prefix | 3252 | 1.005 | 1.133 | 1.56x | 680 / 2589 |
@@ -61,11 +70,44 @@ McNemar over positions does not apply between them.
 
 ## 2. Gates
 
-- **G1 — routed ≥ 1.5× neural: PASS.** 1.77×, +0.557 [+0.487, +0.629].
+- **G1 — routed ≥ 1.5× neural: PASS.** 1.77×, +0.557 [+0.487, +0.629],
+  136/137 non-zero differences positive.
 - **G2 — routed ≥ entropy-routed: PASS.** +0.134 [+0.106, +0.163], p<0.001.
 
 At 150 records both intervals are far clear of zero. This is the first
 properly powered version of either gate.
+
+### G2 is carried entirely by the verb bet
+
+The audit's finding, reproduced. Per-record pairing, 150 records:
+
+| comparison | delta [95% boot] | records negative |
+|---|---|---|
+| routed (verb bet) − entropy | **+0.134 [+0.106, +0.163]** | 8 |
+| routed (shared prefix) − entropy | −0.017 [−0.042, +0.006] | 36 |
+| entropy + shared scaffold − entropy | −0.022 [−0.046, +0.000] | 35 |
+| routed (verb bet) − routed (shared prefix) | +0.151 [+0.120, +0.185] | 1 |
+
+G2 as pre-registered is PASS, because the prereg fixed the verb bet as
+primary before the run. But **a shared-prefix scaffold does not beat the
+comparator — it ties or slightly loses.** G2 therefore reads "**verb-bet**
+scaffold coverage versus none", not "scaffold coverage versus none", and
+certainly not "structure signal beats entropy signal".
+
+### The like-for-like routing-signal test: indistinguishable
+
+The only fair test of the *signal* gives both routers the same three sources —
+structure precedence (routed, shared prefix) against entropy gating with the
+same scaffold (structure + entropy):
+
+    routed-shared − (entropy + scaffold) = +0.0051 [−0.0000, +0.0110]
+
+**A tie, with the interval touching zero.** This, not G2, is the sentence to
+quote about structure-versus-entropy as a routing signal. G2 measures a source
+set, not a signal: the comparator lacks the FSM. As a *mechanism* the
+comparator faithfully implements ReSpec-style routing (low entropy → retrieval
+draft) and is not a strawman; as a *source set* it is one, which is exactly why
+the like-for-like row exists.
 
 ## 3. The pre-registered hypotheses
 
@@ -81,11 +123,33 @@ net_trade = scaffold_accepted(routed) − [content(entropy) − content(routed)]
           = +106
 ```
 
-**The prediction was wrong.** The draft did strengthen exactly as expected —
-teacher-forced held-out accuracy 0.3022, per-token acceptance 0.13 in the
-neural arm — and the scaffold still wins 968 TEMPLATE tokens against 862
-content tokens surrendered. A grammar drafter is not a crutch for a weak
-draft at this scale; it is additive.
+**The prediction was wrong — for the primary configuration only.** Restated
+after the audit, with the uncertainty the prereg failed to define for this
+statistic:
+
+| configuration | scaffold-proposed | other-proposed | `net_trade` |
+|---|---|---|---|
+| routed, verb bet (**primary**) | 968 | 2422 | **+106** [+81, +132] |
+| routed, shared prefix | 680 | 2589 | **−15** |
+| entropy + shared scaffold | 680 | 2585 | −19 |
+
+Per-record bootstrap on the primary: [+81, +132], 90 records positive, 8
+negative, 52 tied. So +106 is not noise — but it is **3.1% of routed's
+accepted tokens**, and the prereg's own prediction is *confirmed* for the
+shared-prefix scaffold and falsified only for the verb bet.
+
+~~A grammar drafter is not a crutch for a weak draft at this scale; it is
+additive.~~ **Retracted.** That generalisation is not supported: it holds for
+one of the two scaffold configurations, by 3%, on one shard at one model size.
+The defensible statement is narrower — *with the verb bet, at 1.7B, on this
+shard, the trade is positive by 3%.*
+
+**The mechanism paragraph below was also muddled**, and the audit is right.
+The comparator's neural draft already wins **0.911 accepted/round at step
+openings** (164 tokens over 180 bucket-0 rounds). The scaffold's incremental
+value there is 2.194 − 0.911 = **1.28/round**, not 2.194. And the "−876
+neural" row is partly a selection effect: inside routed the neural draft is
+left the harder rounds, while in the comparator it keeps the easy openings.
 
 **Caveat on the statistic, found while writing this up.** The prereg justified
 `net_trade` with "both arms open the same lookup rounds, so the difference is
@@ -121,12 +185,28 @@ table:
 - The tuning table is **exactly flat**: 1.165 accepted/round at every one of
   0.25, 0.5, 1.0, 1.5, 2.0, 3.0 — variation 0.000, predicted < 0.05.
 
-**G2 is therefore read as pre-registered: "scaffold coverage versus none",
-not "structure signal beats entropy signal."** Both arms open effectively the
-same lookup rounds; the gate contributes nothing because there is nothing to
-gate on. A target-entropy routing signal is uninformative in this workload.
+**G2 is therefore read as pre-registered — with the correction above, as
+"verb-bet scaffold coverage versus none", not "structure signal beats entropy
+signal."**
 
-### H3 — CONFIRMED, with the same knock-on as before.
+**But "the gate contributes nothing" overstates what was measured**, and the
+audit is right to separate two senses of inert:
+
+- *Inert in tuning* — measured, and it holds: the table is flat across the
+  whole grid. **Caveat: that table comes from 6 TRAIN records and is not in
+  any committed artifact, so it is not independently verifiable.**
+- *Inert in behaviour* — **not** demonstrated. The threshold in use is 0.25
+  (the largest `gate_signal` on any lookup-opened round is 0.247), and
+  **433 of 3244 rounds (13.3%) were sent straight to the neural draft without
+  the lookup being tried at all.** Whether the lookup would have hit on them
+  is not measured on held-out. The 811-vs-764 gap in lookup-opened rounds is
+  exactly what a gate that blocks some lookup hits would produce.
+
+So: a target-entropy signal has nothing to *tune* on in this workload, and
+86.7% of decisions face a near-deterministic target. That it changes nothing
+in *behaviour* is inferred, not measured.
+
+### H3 — directionally CONFIRMED (no threshold was pre-registered, so this is soft)
 
 | bucket | neural | lookup | scaffold | routed | entropy |
 |---|---|---|---|---|---|
@@ -137,6 +217,22 @@ gate on. A target-entropy routing signal is uninformative in this workload.
 | 4 (25–48) | 0.355 (488) | 0.591 (416) | 0.020 (659) | 0.860 (351) | 0.850 (353) |
 | 5 (49+) | 0.420 (300) | 0.688 (247) | 0.024 (421) | 1.090 (200) | 1.064 (202) |
 | 6 (no prior hop) | 0.511 (2105) | 0.322 (2417) | 0.214 (2619) | 1.060 (1552) | 0.978 (1613) |
+
+**Requirement not met, stated rather than waived (prereg §6, spec §10).**
+These 35 bucket acceptance numbers are quoted **without** their distinct-token
+counts and majority-class rates, which spec §10 requires of every acceptance
+number. They cannot be produced from these artifacts: a round row carries no
+target tokens. Amendment 2026-08-29b adds `accepted_ids`, which makes them
+producible from the next run onward. Until then this table is descriptive and
+under-reported, and no effect may be read off it.
+
+Spec §15's constant-predictor rule bites hardest here and the doc should name
+it: **at bucket 0 the FSM *is* a constant predictor** — it emits
+`Action: Search[` regardless of context — and it scores 2.194/4 = 55% per-token
+acceptance there. That is precisely the "template predictability" effect §3
+excludes from *measurement*; counting it as *systems work* is legitimate and is
+the whole claim, but it must be named, not left as an unexplained bucket-0
+number.
 
 Routed and entropy are indistinguishable in buckets 3–5 (entropy is
 marginally ahead in bucket 3) and separate at bucket 0, where only the FSM can
@@ -150,7 +246,7 @@ Not tuned in any way; re-run under the corrected harness on the larger shard
 so the number exists. Byte-identical positions, so McNemar applies:
 
 baseline **1468/4857 = 0.3022**, hop-signal **1487/4857 = 0.3062**,
-discordant 139/158, exact **McNemar p = 0.2963**.
+discordant 158 (baseline wrong, hop right) vs 139, exact **McNemar p = 0.2963**.
 
 **No effect.** The §11 negative is not reopened by this and no retuning
 follows from it.
@@ -158,19 +254,26 @@ follows from it.
 ## 5. What this licenses
 
 Licensed: routing three structure-selected draft sources gives **2.081 tokens
-per target verification against 1.525** for the neural draft alone (G1 1.77×,
-interval clear of zero at n=150), and beats a ReSpec-style entropy comparator
-by 0.134 [0.106, 0.163] accepted tokens per round.
+per target verification against 1.525** for the neural draft alone — G1 1.77×,
+interval clear of zero at n=150, 136/137 records positive. This is the result.
 
-Licensed, and now measured twice at two scales: **a target-entropy routing
-signal has nothing to route on in this workload** — 86.7% of routing decisions
-face a near-deterministic target, and the tuning table is exactly flat. Frame
-it as "entropy is uninformative here", never as "structure beats entropy in
-general".
+Licensed: **a target-entropy routing signal has nothing to tune on in this
+workload** — 86.7% of routing decisions face a near-deterministic target.
+Frame it as "entropy is uninformative here", never as "structure beats entropy
+in general", and not as "the gate changes nothing", which is inferred rather
+than measured (§3 above).
 
-NOT licensed: any content-quality claim. Routed's margin over the comparator
-is TEMPLATE tokens; it accepts 862 fewer content tokens. The systems quantity
-is the claim.
+NOT licensed, and this is the correction the audit forced:
+
+- **"Structure routing beats entropy routing."** The like-for-like test —
+  same three sources, precedence versus gating — is **+0.0051
+  [−0.0000, +0.0110]**, a tie. G2's +0.134 measures a *source set*, not a
+  signal.
+- **Any content-quality claim.** Routed's margin is scaffold-proposed tokens.
+  The "862 fewer content tokens" figure is an upper bound built on a
+  proposer-based label, not a token-type one (amendment 2026-08-29b).
+- **"A grammar drafter is additive."** True for the verb bet by 3%; the
+  shared-prefix scaffold has `net_trade = −15`.
 
 ## 6. Cost
 
